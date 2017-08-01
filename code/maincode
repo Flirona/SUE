@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 01 16:34:49 2017
+
+@author: Florina
+"""
+import io,os
+import pandas as pd
+root = 'C:\Users\Florina\Desktop\SUE\digte\RAW'
+os.chdir(root)
+
+dirnames = ['\maskineRAW','\menneskeRAW']
+
+#contentliste
+alldircontent = []
+for dirname in dirnames:
+    dirpath = root+dirname
+    dircontent=[]
+    for filename in os.listdir(dirpath):
+        fullpath = dirpath + '/' + filename
+        with io.open(fullpath, 'r', encoding = 'latin-1') as f:
+            text = f.read()
+        dircontent.append(text)
+    alldircontent.append(dircontent)
+
+#labelliste
+labels = ['maskine','menneske']
+alllabels = []
+for i in range(len(alldircontent)):
+    lab = labels[i]
+    print lab
+    tmp = []
+    for elem in alldircontent[i]:
+        tmp.append(lab)
+    alllabels.append(tmp)
+
+#nu matcher vores labelsliste med vores contentliste
+print alllabels[0][0]
+print alldircontent[0][0]
+
+labels_list = [item for sublist in alllabels for item in sublist]
+text_list = [item for sublist in alldircontent for item in sublist]
+
+print len(labels_list) == len(text_list)
+data = pd.DataFrame()
+data['text'] = text_list
+data['label'] = labels_list
+
+data.head()
+data.tail()
+
+print set (data.label)
+data.label.value_counts()
+
+text_clean=[]
+for text in data['text']:
+    text = text.rstrip()
+    text_clean.append(text)
+
+data['text_clean'] = text_clean
