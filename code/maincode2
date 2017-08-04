@@ -4,10 +4,14 @@ Created on Tue Aug 01 16:34:49 2017
 
 @author: Florina
 """
-import io,os
+import os, io
 import pandas as pd
-import numpy
-from sklearn.feature_extraction.text import CountVectorizer
+import numpy as np
+import pickle
+
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn import metrics
+from sklearn.linear_model import LogisticRegressionCV
 
 root = 'C:\Users\Florina\Desktop\SUE\digte\RAW'
 os.chdir(root)
@@ -36,10 +40,16 @@ for i in range(len(alldircontent)):
         tmp.append(lab)
     alllabels.append(tmp)
 
+#nu matcher vores labelsliste med vores contentliste
+print alllabels[0][0]
+print alldircontent[0][0]
+
+#samle de to lister i en orden, så vi kan lave en dataframe
+#flatten list
 labels_list = [item for sublist in alllabels for item in sublist]
 text_list = [item for sublist in alldircontent for item in sublist]
 
-# print len(labels_list) == len(text_list)
+print len(labels_list) == len(text_list)
 data = pd.DataFrame()
 data['text'] = text_list
 data['label'] = labels_list
@@ -47,8 +57,10 @@ data['label'] = labels_list
 data.head()
 data.tail()
 
-# data.label.value_counts()
+print set (data.label)
+data.label.value_counts()
 
+#rense dataframe for mærkelige tegn
 text_clean=[]
 for text in data['text']:
     text = text.rstrip()
@@ -57,14 +69,45 @@ for text in data['text']:
 data['text_clean'] = text_clean
 ################################################################
 
-count_vectorizer = CountVectorizer()
-counts = count_vectorizer.fit_transform(data['text'].values)
+#we're creating a mask of what data we want in one group and what we want in another group
+ratio = 0.8
+mask = np.random.rand(len(data)) < ratio
+data_train = data[mask]
+data_test = data[~mask]
 
-from sklearn.naive_bayes import MultinomialNB
+print data_train.shape
+print data_test.shape
 
-classifier = MultinomialNB()
-targets = data['label'].values
-classifier.fit(counts, targets)
+print 1/2
+print 2/1
 
-with open('classifier.pcl', 'wb') as file_object:
-    pickle.dump(clf, file_object)
+print len(data_train)/len(data)
+print len(data_test)/len(data)
+
+train_x = data_train['text_clean'].values #features
+train_y = data_train['label'].values #classes
+#testing/validation
+test_x = data_test['text_clean'].values #features
+test_y = data_test['label'].values #classes
+
+vecSpc = CountVectorizer() #instantiate vectorizer
+train_feat = vecSpc.fit_transform(train_x)
+
+feat_names = vecSpc.get_feature_names()
+print len(feat_names)
+print feat_names
+
+clf = LogisticRegressionCV() #instatiate classifier
+clf.fit(train_feat, train_y)
+
+test_feat = vecSpc.transform(test_x)
+pred = clf.predict(test_feat)
+
+conf_mat = metrics.confusion_matrix(test_y, pred)
+print conf_mat
+
+perf_acc = metrics.accuracy_score(test_y, pred)
+
+perf_f1 = metrics.f1_score(test_y, pred, pos_label = 'menneske')
+
+print metrics.classification_report(test_y, pred)
