@@ -21,7 +21,6 @@ os.chdir(root)
 
 dirnames = ['/maskineRAW/','/menneskeRAW/']
 
-#this is the contentlist
 alldircontent = []
 for dirname in dirnames:
     dirpath = root+dirname
