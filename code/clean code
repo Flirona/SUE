@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 08 11:34:52 2017
+
+@author: Florina
+"""
+
+import os, io
+import pandas as pd
+import numpy as np
+import pickle
+import eli5
+import __future__
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn import metrics
+from sklearn.linear_model import LogisticRegressionCV
+
+root = 'C:\\Users\\Florina\\Desktop\\SUE\\digte\\RAW'
+os.chdir(root)
+
+dirnames = ['/maskineRAW/','/menneskeRAW/']
+
+#this is the contentlist
+alldircontent = []
+for dirname in dirnames:
+    dirpath = root+dirname
+    dircontent=[]
+    for filename in os.listdir(dirpath):
+        fullpath = dirpath + '/' + filename
+        with io.open(fullpath, 'r', encoding = 'latin-1') as f:
+            text = f.read()
+        dircontent.append(text)
+    alldircontent.append(dircontent)
+
+labels = ['maskine','menneske']
+alllabels = []
+for i in range(len(alldircontent)):
+    lab = labels[i]
+    tmp = []
+    for elem in alldircontent[i]:
+        tmp.append(lab)
+    alllabels.append(tmp)
+
+labels_list = [item for sublist in alllabels for item in sublist]
+text_list = [item for sublist in alldircontent for item in sublist]
+
+data = pd.DataFrame()
+data['text'] = text_list
+data['label'] = labels_list
+ 
+text_clean=[]
+for text in data['text']:
+    text = text.rstrip()
+    text_clean.append(text)
+
+data['text_clean'] = text_clean
+
+ratio = 0.8
+mask = np.random.rand(len(data)) < ratio
+data_train = data[mask]
+data_test = data[~mask]
+
+train_x = data_train['text_clean'].values
+train_y = data_train['label'].values
+
+test_x = data_test['text_clean'].values
+test_y = data_test['label'].values
+
+vecSpc = CountVectorizer(encoding = 'latin-1')
+train_feat = vecSpc.fit_transform(train_x)
+
+feat_names = vecSpc.get_feature_names()
+
+clf = LogisticRegressionCV()
+clf.fit(train_feat, train_y)
+
+test_feat = vecSpc.transform(test_x)
+pred = clf.predict(test_feat)
+
+conf_mat = metrics.confusion_matrix(test_y, pred)
+perf_acc = metrics.accuracy_score(test_y, pred)
+perf_f1 = metrics.f1_score(test_y, pred, pos_label = 'menneske')
+
+for i, char in enumerate(data_test.index.values):
+    print char, test_y[i], pred[i]
+
+eli5.show_weights(clf, vec = vecSpc, top=25)
+
+
+#print data_test["text_clean"][42]
+
+for i in range(len(pred)):
+    print i, test_y[i], pred[i]
+"""
+with open('cleancode.pcl', 'wb') as file_object:
+    pickle.dump(clf, file_object)
+    
+clf = pickle.load(open('cleancode.pcl', 'r'))
+
+eli5.show_weights(clf, vec = vecSpc, top = 25)
+
+eli5.show_prediction(clf, data_test, vec = vecSpc)
+"""
